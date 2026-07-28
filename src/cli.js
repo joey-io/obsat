@@ -10,24 +10,23 @@ if (!command || command === "help" || command === "--help" || command === "-h") 
 }
 
 try {
-  if (command === "sources") {
-    console.log(JSON.stringify(obsat.sources(), null, 2));
-    process.exit(0);
-  }
-
-  if (command === "satellites") {
-    console.log(JSON.stringify(obsat.satellites(), null, 2));
-    process.exit(0);
+  if (command === "sources") printAndExit(obsat.sources());
+  if (command === "satellites") printAndExit(obsat.satellites());
+  if (command === "capabilities") printAndExit(obsat.capabilities());
+  if (command === "doctor") printAndExit(obsat.doctor());
+  if (command === "auth" && args[0] === "status") {
+    printAndExit(obsat.capabilities().map((source) => ({
+      source: source.id,
+      required: source.env ?? [],
+      configured: source.configured
+    })));
   }
 
   if (command === "probe" || command === "observe") {
     const [latValue, lonValue] = args;
     const lat = Number(latValue);
     const lon = Number(lonValue);
-
-    if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
-      throw new Error(`${command} requires numeric latitude and longitude`);
-    }
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) throw new Error(`${command} requires numeric latitude and longitude`);
 
     const sources = readOption(args, "--sources")?.split(",").filter(Boolean)
       ?? readOption(args, "--satellites")?.split(",").filter(Boolean);
@@ -45,6 +44,11 @@ try {
 } catch (error) {
   console.error(`obsat: ${error instanceof Error ? error.message : String(error)}`);
   process.exit(1);
+}
+
+function printAndExit(value) {
+  console.log(JSON.stringify(value, null, 2));
+  process.exit(0);
 }
 
 function readOption(values, name) {
@@ -66,6 +70,9 @@ function printHelp() {
 Usage:
   obsat sources
   obsat satellites
+  obsat capabilities
+  obsat doctor
+  obsat auth status
   obsat probe <lat> <lon> [options]
 
 Options:
@@ -77,6 +84,7 @@ Options:
   -h, --help          Show help.
 
 Examples:
+  obsat doctor
   obsat sources
   obsat probe 38.8977 -77.0365
   obsat probe 35.6892 51.3890 --radius-km 10
