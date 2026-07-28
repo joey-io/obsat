@@ -5,6 +5,9 @@
   "type": "module",
   "main": "./src/index.js",
   "exports": "./src/index.js",
+  "bin": {
+    "obsat": "./src/cli.js"
+  },
   "scripts": {
     "test": "node --test"
   },
