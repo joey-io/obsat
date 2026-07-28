@@ -5,6 +5,11 @@ import { sentinel1Rtc } from "./adapters/sentinel1rtc.js";
 import { sentinel2 } from "./adapters/sentinel2.js";
 import { hlsLandsat } from "./adapters/hlsLandsat.js";
 import { hlsSentinel } from "./adapters/hlsSentinel.js";
+import { earthquakes } from "./adapters/earthquakes.js";
+import { elevation } from "./adapters/elevation.js";
+import { weather } from "./adapters/weather.js";
+import { water } from "./adapters/water.js";
+import { airNow } from "./adapters/airnow.js";
 
 export { Obsat } from "./obsat.js";
 export { AdapterRegistry } from "./registry.js";
@@ -15,6 +20,11 @@ export { sentinel1Rtc } from "./adapters/sentinel1rtc.js";
 export { sentinel2 } from "./adapters/sentinel2.js";
 export { hlsLandsat } from "./adapters/hlsLandsat.js";
 export { hlsSentinel } from "./adapters/hlsSentinel.js";
+export { earthquakes } from "./adapters/earthquakes.js";
+export { elevation } from "./adapters/elevation.js";
+export { weather } from "./adapters/weather.js";
+export { water } from "./adapters/water.js";
+export { airNow } from "./adapters/airnow.js";
 
 export const adapters = [
   sentinel1,
@@ -22,7 +32,12 @@ export const adapters = [
   sentinel2,
   landsat,
   hlsLandsat,
-  hlsSentinel
+  hlsSentinel,
+  earthquakes,
+  elevation,
+  weather,
+  water,
+  airNow
 ];
 
 export const obsat = new Obsat({ adapters });
