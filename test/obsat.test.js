@@ -11,6 +11,7 @@ import {
   openStreetMap,
   elevation,
   water,
+  weather,
   nominatim,
   wikipedia,
   gbif,
@@ -294,6 +295,72 @@ test("usgs-elevation tolerates a missing acquisition date", async () => {
   const [observation] = await elevation.observe({ lat: 1, lon: 2 }, { fetch });
   assert.equal(observation.observedAt, null);
   assert.equal(observation.properties.elevationMeters, 12.5);
+});
+
+/* The three adapters below cover the United States only. The README promises
+   that such an adapter "returns nothing outside their coverage area rather
+   than failing", and each of them broke that promise in a different way: a
+   200 carrying a non-JSON body, and two flavours of 404. A probe of Paris
+   reported three broken sources instead of eleven working ones. */
+
+test("usgs-elevation returns nothing outside 3DEP coverage", async () => {
+  // EPQS answers 200 with a JSON content type and a plain-text body.
+  const fetch = async () => response("Call failed.  [Failed cloud operation: Open, Path: /vsimem/_0001.aux.xml]");
+  assert.deepEqual(await elevation.observe({ lat: 48.8584, lon: 2.2945 }, { fetch }), []);
+});
+
+test("usgs-elevation still throws when EPQS itself fails", async () => {
+  const fetch = async () => response("", { ok: false, status: 503 });
+  await assert.rejects(
+    () => elevation.observe({ lat: 38.9847, lon: -77.0947 }, { fetch }),
+    /usgs-elevation request failed: 503/
+  );
+});
+
+test("nws-weather returns nothing outside US forecast coverage", async () => {
+  const fetch = async () => response(
+    { title: "Data Unavailable For Requested Point", type: "https://api.weather.gov/problems/InvalidPoint" },
+    { ok: false, status: 404 }
+  );
+  assert.deepEqual(await weather.observe({ lat: 48.8584, lon: 2.2945 }, { fetch }), []);
+});
+
+test("nws-weather still throws when the service is down", async () => {
+  const fetch = async () => response("", { ok: false, status: 500 });
+  await assert.rejects(
+    () => weather.observe({ lat: 38.9847, lon: -77.0947 }, { fetch }),
+    /nws-weather point request failed: 500/
+  );
+});
+
+test("usgs-water treats an empty bounding box as no sites, not an error", async () => {
+  // NWIS reports "nothing here" as a 404 with an empty body.
+  const fetch = async () => response("", { ok: false, status: 404 });
+  assert.deepEqual(await water.observe({ lat: 48.8584, lon: 2.2945 }, { fetch }), []);
+});
+
+test("usgs-water still throws when NWIS rejects the request", async () => {
+  const fetch = async () => response("", { ok: false, status: 400 });
+  await assert.rejects(
+    () => water.observe({ lat: 38.9847, lon: -77.0947, radiusKm: 10 }, { fetch }),
+    /usgs-water site request failed: 400/
+  );
+});
+
+test("a US-only adapter outside its coverage leaves the probe clean", async () => {
+  const fetch = async (url) => {
+    const href = String(url);
+    if (href.includes("epqs.nationalmap.gov")) return response("Call failed.  [Failed cloud operation]");
+    if (href.includes("api.weather.gov")) return response({ title: "Data Unavailable" }, { ok: false, status: 404 });
+    return response("", { ok: false, status: 404 }); // NWIS
+  };
+
+  const runtime = new Obsat({ adapters: [elevation, weather, water], fetch });
+  const result = await runtime.probe({ lat: 48.8584, lon: 2.2945 });
+
+  assert.deepEqual(result.errors, []);
+  assert.deepEqual(result.observations, []);
+  assert.deepEqual(result.sources, ["usgs-elevation", "nws-weather", "usgs-water"]);
 });
 
 test("nominatim flattens the address into stable fields", async () => {

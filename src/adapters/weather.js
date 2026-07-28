@@ -20,6 +20,10 @@ export const weather = {
     // follow it.
     const pointUrl = `https://api.weather.gov/points/${round4(lat)},${round4(lon)}`;
     const pointResponse = await fetchImpl(pointUrl, { headers });
+    // The NWS forecasts the United States and its territories. Anywhere else
+    // it answers 404 with an InvalidPoint problem document, which is the
+    // service saying "not mine" rather than failing. Report nothing.
+    if (pointResponse.status === 404) return [];
     if (!pointResponse.ok) throw new Error(`nws-weather point request failed: ${pointResponse.status}`);
     const point = await pointResponse.json();
     const properties = point.properties ?? {};

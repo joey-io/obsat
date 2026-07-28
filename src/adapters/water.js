@@ -23,6 +23,10 @@ export const water = {
     siteUrl.searchParams.set("siteOutput", "basic");
 
     const siteResponse = await fetchImpl(siteUrl);
+    // NWIS reports "no sites in this bounding box" as a 404 with an empty
+    // body. That is the ordinary answer for most of the world and for plenty
+    // of the United States, so it is an empty result, not a failure.
+    if (siteResponse.status === 404) return [];
     if (!siteResponse.ok) throw new Error(`usgs-water site request failed: ${siteResponse.status}`);
     const rows = parseRdb(await siteResponse.text()).slice(0, limit);
     if (!rows.length) return [];

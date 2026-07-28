@@ -16,7 +16,21 @@ export const elevation = {
 
     const response = await fetchImpl(url);
     if (!response.ok) throw new Error(`usgs-elevation request failed: ${response.status}`);
-    const data = await response.json();
+
+    // 3DEP covers the United States and its territories. Asked about a point
+    // outside that footprint, EPQS answers 200 with a JSON content type and a
+    // plain-text body: "Call failed. [Failed cloud operation: Open, Path:
+    // /vsimem/...]". So the out-of-coverage case arrives as a parse error
+    // rather than a status, and reading it with response.json() made every
+    // probe outside the US report a broken adapter. Absent coverage is not an
+    // outage — return nothing and let the other adapters answer.
+    const body = await response.text();
+    let data;
+    try {
+      data = JSON.parse(body);
+    } catch {
+      return [];
+    }
 
     // EPQS returns the elevation as a JSON *string* ("103.721260071"), and it
     // has no `valueDate` or `dataSource` field. The acquisition date lives at

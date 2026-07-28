@@ -52,6 +52,15 @@ All notable changes to Obsat are documented here.
   keeps, avoiding a 301 redirect on every request.
 - The outbound User-Agent claimed three different versions across two adapters
   and the MCP server, none of which matched package.json.
+- Three US-only adapters reported an error for every point outside their
+  coverage area instead of returning nothing, so a probe of anywhere in Europe
+  or Asia looked like three broken sources. Each failed differently:
+  `usgs-elevation` because EPQS answers 200 with a JSON content type and the
+  plain-text body "Call failed.", which arrived as a parse error;
+  `nws-weather` because api.weather.gov answers 404 with an InvalidPoint
+  problem document; and `usgs-water` because NWIS reports an empty bounding
+  box as a 404. All three now return an empty result and still throw on a real
+  failure.
 
 ### Changed
 
