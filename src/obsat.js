@@ -1,4 +1,5 @@
 import { AdapterRegistry } from "./registry.js";
+import { normalizeObservation } from "./evidence.js";
 
 export class Obsat {
   constructor({ adapters = [], fetch, env } = {}) {
@@ -15,6 +16,27 @@ export class Obsat {
 
   sources() { return this.registry.list(); }
   satellites() { return this.sources().filter((source) => source.kind === "satellite"); }
+  capabilities() {
+    return this.sources().map((source) => ({
+      id: source.id,
+      kind: source.kind,
+      collections: source.collections,
+      status: source.status,
+      configured: source.env.every((name) => Boolean((this.env ?? process.env)[name]))
+    }));
+  }
+
+  doctor() {
+    const sources = this.sources();
+    return {
+      node: process.version,
+      fetch: typeof (this.fetch ?? globalThis.fetch) === "function",
+      sources: sources.length,
+      missingEnvironment: sources.flatMap((source) =>
+        source.env.filter((name) => !(this.env ?? process.env)[name]).map((name) => ({ source: source.id, name }))
+      )
+    };
+  }
 
   async probe(options = {}) { return this.observe(options); }
 
@@ -40,11 +62,16 @@ export class Obsat {
     for (let index = 0; index < settled.length; index += 1) {
       const result = settled[index];
       const adapter = adapters[index];
-      if (result.status === "fulfilled") observations.push(...result.value.observations);
-      else errors.push({
-        source: adapter.id,
-        message: result.reason instanceof Error ? result.reason.message : String(result.reason)
-      });
+      if (result.status === "fulfilled") {
+        for (const observation of result.value.observations ?? []) {
+          observations.push(normalizeObservation(observation, adapter, request));
+        }
+      } else {
+        errors.push({
+          source: adapter.id,
+          message: result.reason instanceof Error ? result.reason.message : String(result.reason)
+        });
+      }
     }
 
     return {
