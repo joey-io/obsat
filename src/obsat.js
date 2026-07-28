@@ -44,7 +44,7 @@ export class Obsat {
     validatePoint(lat, lon);
     const selected = sources ?? satellites;
     const request = { lat, lon, since, until, limit, radiusKm };
-    const adapters = this.registry.resolve(selected);
+    const { adapters, skipped } = this.#partition(this.registry.resolve(selected));
 
     const settled = await Promise.allSettled(
       adapters.map(async (adapter) => ({
@@ -77,10 +77,38 @@ export class Obsat {
     return {
       location: { lat, lon },
       queriedAt: new Date().toISOString(),
+      // Only the adapters that actually ran. Adapters held back for a missing
+      // credential are reported separately in `skipped`.
       sources: adapters.map((adapter) => adapter.id),
+      skipped,
       observations,
       errors
     };
+  }
+
+  // An adapter that declares `env` but has no value for it cannot produce data,
+  // so running it only ever yields a predictable "requires KEY" failure. That
+  // noise used to land in `errors` on every probe and made a clean run look
+  // broken. Hold those adapters back instead and report them as skipped.
+  #partition(resolved) {
+    const environment = this.env ?? process.env;
+    const adapters = [];
+    const skipped = [];
+
+    for (const adapter of resolved) {
+      const missingEnv = (adapter.env ?? []).filter((name) => !environment[name]);
+      if (missingEnv.length) {
+        skipped.push({
+          source: adapter.id,
+          missingEnv,
+          reason: `${adapter.id} needs ${missingEnv.join(", ")}`
+        });
+        continue;
+      }
+      adapters.push(adapter);
+    }
+
+    return { adapters, skipped };
   }
 }
 

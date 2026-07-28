@@ -2,6 +2,7 @@
 
 import readline from "node:readline";
 import { obsat } from "./index.js";
+import { OBSAT_VERSION } from "./version.js";
 
 const rl = readline.createInterface({ input: process.stdin, crlfDelay: Infinity });
 
@@ -19,7 +20,7 @@ rl.on("line", async (line) => {
       writeResult(message.id, {
         protocolVersion: message.params?.protocolVersion ?? "2025-06-18",
         capabilities: { tools: {} },
-        serverInfo: { name: "obsat", version: "0.2.0" }
+        serverInfo: { name: "obsat", version: OBSAT_VERSION }
       });
       return;
     }
@@ -56,7 +57,7 @@ function tools() {
     {
       name: "obsat_probe",
       title: "Probe a location",
-      description: "Query enabled Earth-observation sources for a latitude and longitude and return normalized evidence.",
+      description: "Query enabled Earth-observation sources for a latitude and longitude and return normalized evidence. Sources whose API key is not configured are skipped and listed under \"skipped\" rather than reported as errors.",
       inputSchema: {
         type: "object",
         properties: {

@@ -1,3 +1,5 @@
+import { USER_AGENT } from "../version.js";
+
 export const openStreetMap = {
   id: "openstreetmap",
   name: "OpenStreetMap Nearby Features",
@@ -22,7 +24,7 @@ export const openStreetMap = {
       method: "POST",
       headers: {
         "content-type": "application/x-www-form-urlencoded;charset=UTF-8",
-        "user-agent": "obsat/0.3 local location probe"
+        "user-agent": USER_AGENT
       },
       body: new URLSearchParams({ data: query })
     });

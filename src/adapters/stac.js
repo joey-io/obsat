@@ -1,7 +1,10 @@
-export function createStacAdapter({ id, name, satellite, endpoint, collections, env = [] }) {
+export function createStacAdapter({ id, name, satellite, endpoint, collections, env = [], sortByNewest = false }) {
   return {
     id,
     name,
+    // Declared explicitly so the registry does not have to assume that any
+    // adapter without a `kind` is a satellite.
+    kind: "satellite",
     satellite,
     endpoint,
     collections,
@@ -19,6 +22,13 @@ export function createStacAdapter({ id, name, satellite, endpoint, collections, 
 
       if (request.since || request.until) {
         body.datetime = `${request.since ?? ".."}/${request.until ?? ".."}`;
+      }
+
+      // Most STAC servers already answer newest-first. NASA's CMR returns
+      // catalogue order instead, which surfaced scenes from 2013 for a probe
+      // run today, so it has to be asked explicitly.
+      if (sortByNewest) {
+        body.sortby = [{ field: "properties.datetime", direction: "desc" }];
       }
 
       const response = await fetchImpl(endpoint, {

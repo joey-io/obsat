@@ -15,7 +15,9 @@ export class AdapterRegistry {
     return [...this.#adapters.values()].map((adapter) => ({
       id: adapter.id,
       name: adapter.name,
-      kind: adapter.kind ?? "satellite",
+      // Built-in satellite adapters declare kind: "satellite" themselves, so a
+      // third-party adapter that omits it is no longer mislabelled as one.
+      kind: adapter.kind ?? "observation",
       provider: adapter.provider ?? null,
       satellite: adapter.satellite ?? null,
       collections: [...(adapter.collections ?? [])],

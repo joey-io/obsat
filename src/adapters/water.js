@@ -8,7 +8,13 @@ export const water = {
   async observe({ lat, lon, radiusKm = 25, limit = 20 }, context = {}) {
     const fetchImpl = context.fetch ?? globalThis.fetch;
     const delta = Math.max(0.01, radiusKm / 111);
-    const bbox = [lon - delta, lat - delta, lon + delta, lat + delta].join(",");
+    // NWIS validates every bBox element and rejects the request with a 400 if
+    // any number carries more than 7 decimal places. radiusKm / 111 routinely
+    // produces 14 (10 / 111 = 0.09009009009009009), which made the default
+    // probe fail every time. Round each edge before serializing.
+    const bbox = [lon - delta, lat - delta, lon + delta, lat + delta]
+      .map((edge) => Number(edge.toFixed(7)))
+      .join(",");
     const siteUrl = new URL("https://waterservices.usgs.gov/nwis/site/");
     siteUrl.searchParams.set("format", "rdb");
     siteUrl.searchParams.set("bBox", bbox);

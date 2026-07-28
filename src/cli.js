@@ -4,51 +4,69 @@ import { obsat } from "./index.js";
 
 const [command, ...args] = process.argv.slice(2);
 
-if (!command || command === "help" || command === "--help" || command === "-h") {
-  printHelp();
-  process.exit(0);
-}
+// Every path below sets process.exitCode and returns rather than calling
+// process.exit(). When stdout is a pipe, writes are asynchronous, and
+// process.exit() discards whatever is still buffered — which truncated any
+// probe larger than the 64 KB pipe buffer. Letting Node exit on its own drains
+// stdout first.
+process.exitCode = await main();
 
-try {
-  if (command === "sources") printAndExit(obsat.sources());
-  if (command === "satellites") printAndExit(obsat.satellites());
-  if (command === "capabilities") printAndExit(obsat.capabilities());
-  if (command === "doctor") printAndExit(obsat.doctor());
-  if (command === "auth" && args[0] === "status") {
-    printAndExit(obsat.capabilities().map((source) => ({
-      source: source.id,
-      required: source.env ?? [],
-      configured: source.configured
-    })));
+async function main() {
+  if (!command || command === "help" || command === "--help" || command === "-h") {
+    printHelp();
+    return 0;
   }
 
-  if (command === "probe" || command === "observe") {
-    const [latValue, lonValue] = args;
-    const lat = Number(latValue);
-    const lon = Number(lonValue);
-    if (!Number.isFinite(lat) || !Number.isFinite(lon)) throw new Error(`${command} requires numeric latitude and longitude`);
+  try {
+    if (command === "sources") return print(obsat.sources());
+    if (command === "satellites") return print(obsat.satellites());
+    if (command === "capabilities") return print(obsat.capabilities());
+    if (command === "doctor") return print(obsat.doctor());
+    if (command === "auth" && args[0] === "status") {
+      return print(obsat.capabilities().map((source) => ({
+        source: source.id,
+        required: source.env ?? [],
+        configured: source.configured
+      })));
+    }
 
-    const sources = readOption(args, "--sources")?.split(",").filter(Boolean)
-      ?? readOption(args, "--satellites")?.split(",").filter(Boolean);
-    const since = readOption(args, "--since");
-    const until = readOption(args, "--until");
-    const limit = readNumberOption(args, "--limit");
-    const radiusKm = readNumberOption(args, "--radius-km");
+    if (command === "probe" || command === "observe") {
+      const [latValue, lonValue] = args;
+      const lat = Number(latValue);
+      const lon = Number(lonValue);
+      if (!Number.isFinite(lat) || !Number.isFinite(lon)) throw new Error(`${command} requires numeric latitude and longitude`);
 
-    const result = await obsat.probe({ lat, lon, sources, since, until, limit, radiusKm });
-    console.log(JSON.stringify(result, null, 2));
-    process.exit(result.errors.length ? 1 : 0);
+      const sources = readOption(args, "--sources")?.split(",").filter(Boolean)
+        ?? readOption(args, "--satellites")?.split(",").filter(Boolean);
+      const since = readOption(args, "--since");
+      const until = readOption(args, "--until");
+      const limit = readNumberOption(args, "--limit");
+      const radiusKm = readNumberOption(args, "--radius-km");
+
+      const result = await obsat.probe({ lat, lon, sources, since, until, limit, radiusKm });
+      console.log(JSON.stringify(result, null, 2));
+
+      // A partial result is a success. One provider being down is the normal
+      // case Obsat is built for, so it must not fail a shell pipeline. Exit
+      // non-zero only when the probe produced nothing usable: either every
+      // adapter that ran failed, or no adapter could run at all because each
+      // one was missing a credential.
+      const attempted = result.sources.length;
+      const everyAdapterFailed = attempted > 0 && result.errors.length === attempted;
+      const nothingCouldRun = attempted === 0;
+      return everyAdapterFailed || nothingCouldRun ? 1 : 0;
+    }
+
+    throw new Error(`Unknown command: ${command}`);
+  } catch (error) {
+    console.error(`obsat: ${error instanceof Error ? error.message : String(error)}`);
+    return 1;
   }
-
-  throw new Error(`Unknown command: ${command}`);
-} catch (error) {
-  console.error(`obsat: ${error instanceof Error ? error.message : String(error)}`);
-  process.exit(1);
 }
 
-function printAndExit(value) {
+function print(value) {
   console.log(JSON.stringify(value, null, 2));
-  process.exit(0);
+  return 0;
 }
 
 function readOption(values, name) {
@@ -75,6 +93,14 @@ Usage:
   obsat auth status
   obsat probe <lat> <lon> [options]
 
+Commands:
+  sources             List every registered adapter and its metadata.
+  satellites          List only the satellite adapters.
+  capabilities        List adapters and whether their credentials are configured.
+  doctor              Check Node, fetch support, and missing environment variables.
+  auth status         Show which adapters have their required keys set.
+  probe <lat> <lon>   Query adapters for one point. "observe" is an alias.
+
 Options:
   --sources <ids>     Comma-separated adapter IDs. Omit to query all.
   --radius-km <km>    Search radius for nearby sensors, events, and map features.
@@ -82,6 +108,14 @@ Options:
   --until <datetime>  End of observation window.
   --limit <number>    Maximum results per adapter.
   -h, --help          Show help.
+
+Adapters that need an API key you have not set are skipped, not run. They are
+listed under "skipped" in the result so a missing key never looks like an error.
+
+Exit codes:
+  0  At least one adapter ran. Partial results still exit 0.
+  1  Every adapter that ran failed, no adapter could run, or the command
+     itself was invalid.
 
 Examples:
   obsat doctor

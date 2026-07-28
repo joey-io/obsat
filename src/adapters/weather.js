@@ -1,3 +1,5 @@
+import { USER_AGENT } from "../version.js";
+
 export const weather = {
   id: "nws-weather",
   name: "US National Weather Service",
@@ -9,10 +11,14 @@ export const weather = {
     const fetchImpl = context.fetch ?? globalThis.fetch;
     const headers = {
       "accept": "application/geo+json",
-      "user-agent": "obsat/0.1 (local Earth observation runtime)"
+      "user-agent": USER_AGENT
     };
 
-    const pointUrl = `https://api.weather.gov/points/${lat},${lon}`;
+    // api.weather.gov only keeps 4 decimal places on /points and answers a 301
+    // to the truncated URL for anything longer. Rounding up front skips that
+    // redirect round trip instead of relying on the fetch implementation to
+    // follow it.
+    const pointUrl = `https://api.weather.gov/points/${round4(lat)},${round4(lon)}`;
     const pointResponse = await fetchImpl(pointUrl, { headers });
     if (!pointResponse.ok) throw new Error(`nws-weather point request failed: ${pointResponse.status}`);
     const point = await pointResponse.json();
@@ -57,3 +63,7 @@ export const weather = {
     return observations;
   }
 };
+
+function round4(value) {
+  return Number(value.toFixed(4));
+}
