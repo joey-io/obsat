@@ -8,6 +8,7 @@ import { hlsSentinel } from "./adapters/hlsSentinel.js";
 import { earthquakes } from "./adapters/earthquakes.js";
 import { elevation } from "./adapters/elevation.js";
 import { weather } from "./adapters/weather.js";
+import { openMeteo } from "./adapters/openMeteo.js";
 import { water } from "./adapters/water.js";
 import { airNow } from "./adapters/airnow.js";
 
@@ -23,21 +24,10 @@ export { hlsSentinel } from "./adapters/hlsSentinel.js";
 export { earthquakes } from "./adapters/earthquakes.js";
 export { elevation } from "./adapters/elevation.js";
 export { weather } from "./adapters/weather.js";
+export { openMeteo } from "./adapters/openMeteo.js";
 export { water } from "./adapters/water.js";
 export { airNow } from "./adapters/airnow.js";
 
-export const adapters = [
-  sentinel1,
-  sentinel1Rtc,
-  sentinel2,
-  landsat,
-  hlsLandsat,
-  hlsSentinel,
-  earthquakes,
-  elevation,
-  weather,
-  water,
-  airNow
-];
+export const adapters = [sentinel1, sentinel1Rtc, sentinel2, landsat, hlsLandsat, hlsSentinel, earthquakes, elevation, openMeteo, weather, water, airNow];
 
 export const obsat = new Obsat({ adapters });
