@@ -61,14 +61,16 @@ console.log(obsat.sources());
 
 ### Global satellite sources
 
-| ID | Data | Key needed |
-| --- | --- | --- |
-| `sentinel-1` | Sentinel-1 radar scenes | No |
-| `sentinel-1-rtc` | Terrain-corrected Sentinel-1 radar | No |
-| `sentinel-2` | Sentinel-2 optical scenes | No |
-| `landsat` | Landsat 8 and 9 surface reflectance | No |
-| `hls-landsat` | NASA harmonized Landsat scenes | No |
-| `hls-sentinel` | NASA harmonized Sentinel-2 scenes | No |
+| ID | Data | Search key needed | Asset-download note |
+| --- | --- | --- | --- |
+| `sentinel-1` | Sentinel-1 radar scenes | No | Some raster assets may need provider signing |
+| `sentinel-1-rtc` | Terrain-corrected Sentinel-1 radar | No | Microsoft account is required to download RTC rasters |
+| `sentinel-2` | Sentinel-2 optical scenes | No | Public STAC assets |
+| `landsat` | Landsat 8 and 9 surface reflectance | No | Public USGS assets |
+| `hls-landsat` | NASA harmonized Landsat scenes | No | Public catalog assets |
+| `hls-sentinel` | NASA harmonized Sentinel-2 scenes | No | Public catalog assets |
+
+Obsat currently searches scene metadata and returns the asset links exposed by each STAC item. It does not automatically download multi-gigabyte raster files.
 
 ### Ground and environmental sources
 
@@ -84,9 +86,9 @@ Some sources only cover the United States. Outside their coverage they may retur
 
 ## Keys
 
-The built-in satellite, earthquake, elevation, weather, and water adapters do not need keys.
+The built-in satellite search, earthquake, elevation, weather, and water adapters do not need keys.
 
-Only AirNow needs a key right now.
+Only AirNow needs a key for the current probe adapters.
 
 ### Get an AirNow key
 
@@ -140,26 +142,26 @@ It exposes two tools:
 - `obsat_probe` — query a latitude and longitude.
 - `obsat_sources` — list registered sources and required environment variables.
 
-Run it directly:
-
-```bash
-npx obsat-mcp
-```
-
-Or after installing this repository locally:
+Run it from this repository:
 
 ```bash
 npm run mcp
 ```
 
-Example MCP client configuration:
+After the `obsat` package is published to npm, run its MCP command with:
+
+```bash
+npx -p obsat obsat-mcp
+```
+
+Example MCP client configuration for a local checkout:
 
 ```json
 {
   "mcpServers": {
     "obsat": {
-      "command": "npx",
-      "args": ["-y", "obsat-mcp"],
+      "command": "node",
+      "args": ["/absolute/path/to/obsat/src/mcp.js"],
       "env": {
         "OBSAT_AIRNOW_API_KEY": "your-key-here"
       }
@@ -168,7 +170,23 @@ Example MCP client configuration:
 }
 ```
 
-The AI can then call:
+Example configuration after npm publication:
+
+```json
+{
+  "mcpServers": {
+    "obsat": {
+      "command": "npx",
+      "args": ["-y", "-p", "obsat", "obsat-mcp"],
+      "env": {
+        "OBSAT_AIRNOW_API_KEY": "your-key-here"
+      }
+    }
+  }
+}
+```
+
+The AI can call `obsat_probe` with:
 
 ```json
 {
