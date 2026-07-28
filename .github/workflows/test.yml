@@ -18,10 +18,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-          cache: npm
-      - run: npm install --ignore-scripts
-      - run: npm test
+      - run: npm run check
       - run: node ./src/cli.js --help
+      - run: node ./src/cli.js doctor
       - run: |
           printf '%s\n' \
             '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18"}}' \
