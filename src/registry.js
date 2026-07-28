@@ -19,7 +19,11 @@ export class AdapterRegistry {
       provider: adapter.provider ?? null,
       satellite: adapter.satellite ?? null,
       collections: [...(adapter.collections ?? [])],
-      env: [...(adapter.env ?? [])]
+      env: [...(adapter.env ?? [])],
+      status: adapter.status ?? "stable",
+      coverage: adapter.coverage ?? "provider-defined",
+      attribution: adapter.attribution ?? adapter.provider ?? adapter.name,
+      license: adapter.license ?? null
     }));
   }
 
