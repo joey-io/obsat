@@ -1,15 +1,17 @@
 {
   "name": "obsat",
-  "version": "0.1.0",
-  "description": "A local-first registry of Earth observation satellite adapters.",
+  "version": "0.2.0",
+  "description": "A local-first location probe for satellite and ground observation sources.",
   "type": "module",
   "main": "./src/index.js",
   "exports": "./src/index.js",
   "bin": {
-    "obsat": "./src/cli.js"
+    "obsat": "./src/cli.js",
+    "obsat-mcp": "./src/mcp.js"
   },
   "scripts": {
-    "test": "node --test"
+    "test": "node --test",
+    "mcp": "node ./src/mcp.js"
   },
   "engines": {
     "node": ">=20"
@@ -17,6 +19,8 @@
   "keywords": [
     "earth-observation",
     "satellite",
+    "sensors",
+    "mcp",
     "stac",
     "landsat",
     "sentinel"
