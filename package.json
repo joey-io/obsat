@@ -1,29 +1,34 @@
 {
   "name": "obsat",
   "version": "0.2.0",
-  "description": "A local-first location probe for satellite and ground observation sources.",
+  "description": "A local-first runtime for Earth observation.",
   "type": "module",
   "main": "./src/index.js",
-  "exports": "./src/index.js",
+  "types": "./index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./src/index.js"
+    }
+  },
+  "files": ["src", "index.d.ts", "README.md", "LICENSE", "CHANGELOG.md"],
   "bin": {
     "obsat": "./src/cli.js",
     "obsat-mcp": "./src/mcp.js"
   },
   "scripts": {
     "test": "node --test",
-    "mcp": "node ./src/mcp.js"
+    "mcp": "node ./src/mcp.js",
+    "check": "node --check src/index.js && node --check src/cli.js && node --check src/mcp.js && npm test",
+    "prepublishOnly": "npm run check"
   },
   "engines": {
     "node": ">=20"
   },
-  "keywords": [
-    "earth-observation",
-    "satellite",
-    "sensors",
-    "mcp",
-    "stac",
-    "landsat",
-    "sentinel"
-  ],
-  "license": "MIT"
+  "keywords": ["earth-observation", "location-intelligence", "satellite", "sensors", "mcp", "stac", "landsat", "sentinel"],
+  "repository": { "type": "git", "url": "git+https://github.com/joey-io/obsat.git" },
+  "bugs": { "url": "https://github.com/joey-io/obsat/issues" },
+  "homepage": "https://github.com/joey-io/obsat#readme",
+  "license": "MIT",
+  "publishConfig": { "access": "public" }
 }
