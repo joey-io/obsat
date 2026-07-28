@@ -1,8 +1,8 @@
 # obsat
 
-Obsat probes a latitude and longitude and asks every registered source what it knows about that place.
+Obsat probes one latitude and longitude and asks every registered data source what it knows about that place.
 
-It runs locally. There is no Obsat server. Your computer calls each public provider directly.
+It runs on the user's computer. There is no Obsat server. Obsat calls each provider directly.
 
 ## Install
 
@@ -20,38 +20,38 @@ import { obsat } from "obsat";
 const result = await obsat.probe({
   lat: 38.8977,
   lon: -77.0365,
-  radiusKm: 25,
+  radiusKm: 10,
   limit: 10
 });
 
 console.log(result);
 ```
 
-Obsat returns one object:
+Obsat returns:
 
 ```js
 {
   location: { lat, lon },
   queriedAt: "...",
-  sources: ["sentinel-2", "usgs-earthquakes", "..."],
+  sources: ["sentinel-2", "open-meteo", "openstreetmap", "..."],
   observations: [],
   errors: []
 }
 ```
 
-One broken or unavailable source does not stop the others. Its error is added to `errors`.
+One broken source does not stop the others. Its error is placed in `errors`.
 
-## Query only some sources
+## Probe only some sources
 
 ```js
-const result = await obsat.probe({
+await obsat.probe({
   lat: 38.8977,
   lon: -77.0365,
-  sources: ["sentinel-2", "nws-weather", "usgs-water"]
+  sources: ["sentinel-2", "open-meteo", "openstreetmap"]
 });
 ```
 
-List the available sources:
+List all source IDs:
 
 ```js
 console.log(obsat.sources());
@@ -59,73 +59,74 @@ console.log(obsat.sources());
 
 ## Built-in sources
 
-### Global satellite sources
+### Global sources
 
-| ID | Data | Search key needed | Asset-download note |
-| --- | --- | --- | --- |
-| `sentinel-1` | Sentinel-1 radar scenes | No | Some raster assets may need provider signing |
-| `sentinel-1-rtc` | Terrain-corrected Sentinel-1 radar | No | Microsoft account is required to download RTC rasters |
-| `sentinel-2` | Sentinel-2 optical scenes | No | Public STAC assets |
-| `landsat` | Landsat 8 and 9 surface reflectance | No | Public USGS assets |
-| `hls-landsat` | NASA harmonized Landsat scenes | No | Public catalog assets |
-| `hls-sentinel` | NASA harmonized Sentinel-2 scenes | No | Public catalog assets |
+| ID | What it returns | Key needed |
+| --- | --- | --- |
+| `sentinel-1` | Radar scene metadata and asset links | No |
+| `sentinel-1-rtc` | Terrain-corrected radar scene metadata | No for search |
+| `sentinel-2` | Optical scene metadata and asset links | No |
+| `landsat` | Landsat 8 and 9 surface-reflectance scenes | No |
+| `hls-landsat` | NASA harmonized Landsat scenes | No |
+| `hls-sentinel` | NASA harmonized Sentinel-2 scenes | No |
+| `usgs-earthquakes` | Nearby earthquakes | No |
+| `open-meteo` | Current weather, forecast, soil temperature, and soil moisture | No |
+| `open-meteo-air` | PM2.5, PM10, ozone, dust, AQI, and other air-quality data | No |
+| `openstreetmap` | Nearby roads, buildings, land use, water, natural features, and named places | No |
 
-Obsat currently searches scene metadata and returns the asset links exposed by each STAC item. It does not automatically download multi-gigabyte raster files.
+### United States sources
 
-### Ground and environmental sources
+| ID | What it returns | Key needed |
+| --- | --- | --- |
+| `usgs-elevation` | Ground elevation | No |
+| `nws-weather` | National Weather Service grid and hourly forecast | No |
+| `usgs-water` | Nearby active water stations and current readings | No |
+| `airnow` | Measured air-quality observations | Yes |
 
-| ID | Coverage | Data | Key needed |
-| --- | --- | --- | --- |
-| `usgs-earthquakes` | Global | Nearby earthquakes | No |
-| `usgs-elevation` | United States | Ground elevation | No |
-| `nws-weather` | United States | Weather grid and hourly forecast | No |
-| `usgs-water` | United States | Nearby active water stations and current readings | No |
-| `airnow` | Mostly United States | Air quality observations | Yes |
-
-Some sources only cover the United States. Outside their coverage they may return no observations or an error. Other sources still run.
+Satellite adapters search catalogs. They return scene metadata and provider asset links. They do not automatically download large raster files.
 
 ## Keys
 
-The built-in satellite search, earthquake, elevation, weather, and water adapters do not need keys.
+Most built-in sources need no key.
 
-Only AirNow needs a key for the current probe adapters.
+### AirNow
 
-### Get an AirNow key
+AirNow is the only built-in adapter that currently needs a key.
 
-1. Open `https://docs.airnowapi.org/account/request/`.
-2. Create a free account.
-3. Copy the API key AirNow gives you.
-4. Set this environment variable:
+1. Go to `https://docs.airnowapi.org/account/request/`.
+2. Request a free account.
+3. Copy the API key from AirNow.
+4. Set it before starting Obsat:
+
+macOS or Linux:
 
 ```bash
-export OBSAT_AIRNOW_API_KEY="your-key-here"
+export OBSAT_AIRNOW_API_KEY="your-key"
 ```
 
-On Windows PowerShell:
+Windows PowerShell:
 
 ```powershell
-$env:OBSAT_AIRNOW_API_KEY="your-key-here"
+$env:OBSAT_AIRNOW_API_KEY="your-key"
 ```
 
-Then run Obsat normally. Do not put the real key in Git.
+Do not commit the key to Git.
 
-### Use a `.env` file
+### `.env`
 
-Obsat does not load `.env` files itself. This keeps the package dependency-free.
-
-Your application can use Node's built-in environment-file option:
+Obsat does not load `.env` files itself. Node can load one:
 
 ```bash
 node --env-file=.env app.js
 ```
 
-Create `.env`:
+`.env`:
 
 ```dotenv
-OBSAT_AIRNOW_API_KEY=your-key-here
+OBSAT_AIRNOW_API_KEY=your-key
 ```
 
-Add this to `.gitignore`:
+`.gitignore`:
 
 ```gitignore
 .env
@@ -133,28 +134,33 @@ Add this to `.gitignore`:
 !.env.example
 ```
 
+## CLI
+
+```bash
+obsat sources
+obsat probe 38.8977 -77.0365
+obsat probe 38.8977 -77.0365 --radius-km 10 --limit 20
+obsat probe 38.8977 -77.0365 --sources open-meteo,open-meteo-air,openstreetmap
+```
+
+`observe` remains an alias for `probe`.
+
 ## Local MCP server
 
 Obsat includes a local MCP server over standard input and output.
 
-It exposes two tools:
+It exposes:
 
-- `obsat_probe` — query a latitude and longitude.
-- `obsat_sources` — list registered sources and required environment variables.
+- `obsat_probe` — probe a latitude and longitude.
+- `obsat_sources` — list adapters and required environment variables.
 
-Run it from this repository:
+Run it from a checkout:
 
 ```bash
 npm run mcp
 ```
 
-After the `obsat` package is published to npm, run its MCP command with:
-
-```bash
-npx -p obsat obsat-mcp
-```
-
-Example MCP client configuration for a local checkout:
+MCP client configuration for a checkout:
 
 ```json
 {
@@ -163,14 +169,14 @@ Example MCP client configuration for a local checkout:
       "command": "node",
       "args": ["/absolute/path/to/obsat/src/mcp.js"],
       "env": {
-        "OBSAT_AIRNOW_API_KEY": "your-key-here"
+        "OBSAT_AIRNOW_API_KEY": "your-key"
       }
     }
   }
 }
 ```
 
-Example configuration after npm publication:
+After npm publication:
 
 ```json
 {
@@ -179,51 +185,40 @@ Example configuration after npm publication:
       "command": "npx",
       "args": ["-y", "-p", "obsat", "obsat-mcp"],
       "env": {
-        "OBSAT_AIRNOW_API_KEY": "your-key-here"
+        "OBSAT_AIRNOW_API_KEY": "your-key"
       }
     }
   }
 }
 ```
 
-The AI can call `obsat_probe` with:
+The AI calls `obsat_probe` with:
 
 ```json
 {
   "lat": 38.8977,
   "lon": -77.0365,
-  "radiusKm": 25,
+  "radiusKm": 10,
   "limit": 10
 }
 ```
 
-Omit `sources` to ask every registered adapter. Pass `sources` when the AI only needs certain data.
+Omit `sources` to query every adapter. A source that needs a missing key returns an error while the other sources continue.
 
-## CLI
+## Add an adapter
 
-```bash
-obsat satellites
-obsat observe 38.8977 -77.0365 --limit 5
-```
-
-The MCP server and JavaScript API are the main interfaces. The CLI is a small debugging tool.
-
-## Add another source
-
-Every source is one adapter in the same registry.
+Every provider is one adapter in the registry:
 
 ```js
 const adapter = {
   id: "my-sensor",
-  name: "My Sensor Network",
+  name: "My Sensor",
   kind: "ground-sensor",
-  provider: "Example provider",
+  provider: "My provider",
   collections: ["temperature"],
   env: ["MY_SENSOR_API_KEY"],
 
   async observe({ lat, lon }, { fetch, env }) {
-    const key = env.MY_SENSOR_API_KEY;
-
     return [{
       id: "reading-1",
       adapter: "my-sensor",
@@ -240,7 +235,7 @@ const adapter = {
 obsat.use(adapter);
 ```
 
-Required adapter fields:
+The required shape is small:
 
 ```ts
 type Adapter = {
@@ -256,7 +251,7 @@ type Adapter = {
 
 ## Important limit
 
-Obsat returns everything its registered sources can provide. It cannot literally know every fact about a location. Add more adapters to increase coverage. Each observation keeps its provider, time, location, properties, source link, and raw evidence so an AI can reason from evidence instead of a summary.
+Obsat cannot literally know every fact about a place. It returns everything the installed adapters can find. Add adapters to add coverage. Each result keeps the source, time, geometry, properties, source link, and raw provider response so an AI can reason from evidence.
 
 ## Test
 
